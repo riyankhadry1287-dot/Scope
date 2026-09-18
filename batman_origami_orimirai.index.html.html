@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE DARK KNIGHT - AAA PHOTOREALISTIC 3D EXPERIENCE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Inter:wght@300;400;600;700&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #03060d;
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            color: #e2e8f0;
+        }
+
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+
+        /* Ultra Premium Glassmorphism UI Panel */
+        .glass-panel {
+            background: rgba(12, 18, 30, 0.75);
+            backdrop-filter: blur(28px) saturate(200%);
+            -webkit-backdrop-filter: blur(28px) saturate(200%);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .glass-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(12px);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-btn:hover {
+            background: rgba(255, 255, 255, 0.18);
+            border-color: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 25px rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .glass-btn.active {
+            background: rgba(59, 130, 246, 0.35);
+            border-color: #3b82f6;
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.6);
+            color: #fff;
+        }
+
+        .hud-overlay {
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        .hud-scanline {
+            background: linear-gradient(to bottom, transparent 50%, rgba(0, 240, 255, 0.04) 51%);
+            background-size: 100% 4px;
+        }
+
+        .hud-vignette {
+            background: radial-gradient(circle, transparent 55%, rgba(2, 6, 14, 0.85) 100%);
+        }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 2px; }
+    </style>
+</head>
+<body class="relative w-full h-full overflow-hidden select-none">
+
+    <!-- WebGL Canvas Container -->
+    <div id="webgl-container" class="absolute inset-0 w-full h-full z-0 cursor-grab active:cursor-grabbing"></div>
+
+    <!-- Screen Post FX Vignette & Scanlines -->
+    <div class="hud-overlay hud-vignette absolute inset-0 z-10"></div>
+    <div id="hud-tactical-grid" class="hud-overlay hud-scanline absolute inset-0 z-10 opacity-0 transition-opacity duration-500 border-[16px] border-cyan-500/20">
+        <div class="absolute top-8 left-8 text-xs font-orbitron text-cyan-400 tracking-widest flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+            <span>TACTICAL HUD OVERLAY // ANALYZING ANATOMY & SUIT INTEGRITY</span>
+        </div>
+        <div class="absolute bottom-8 right-8 text-xs font-orbitron text-cyan-400/80">
+            8-PACK KEVLAR EMBEDDED ARMOR | GOTHAM WEATHER SYSTEM ACTIVE
+        </div>
+    </div>
+
+    <!-- UI Header -->
+    <header class="absolute top-0 left-0 right-0 p-6 z-20 flex justify-between items-center pointer-events-none">
+        <div class="pointer-events-auto flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-2xl glass-panel flex items-center justify-center text-white border border-white/20 shadow-2xl">
+                <i class="fa-solid font-bold fa-shield-halved text-2xl text-yellow-400"></i>
+            </div>
+            <div>
+                <h1 class="font-orbitron font-black text-xl text-white tracking-wider flex items-center gap-2">
+                    BATMAN <span class="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">GTA-V / CYBERPUNK 8-PACK</span>
+                </h1>
+                <p class="text-xs text-slate-300 tracking-wide font-medium">PHOTOREALISTIC HUMAN ANATOMY & TUMBLER BATMOBILE</p>
+            </div>
+        </div>
+
+        <div class="pointer-events-auto flex items-center space-x-3">
+            <button id="btn-audio" onclick="toggleAudio()" class="glass-btn px-4 py-2.5 rounded-xl text-xs font-semibold tracking-wider flex items-center space-x-2 text-slate-200 hover:text-white">
+                <i id="audio-icon" class="fa-solid fa-volume-xmark text-slate-400"></i>
+                <span id="audio-label">AUDIO OFF</span>
+            </button>
+            <button id="btn-tactical" onclick="toggleTacticalVision()" class="glass-btn px-4 py-2.5 rounded-xl text-xs font-semibold tracking-wider flex items-center space-x-2 text-cyan-400 hover:text-cyan-300">
+                <i class="fa-solid fa-eye"></i>
+                <span>TACTICAL HUD</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Bottom Control Deck Floating Bar -->
+    <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 w-[96%] max-w-6xl glass-panel rounded-2xl p-4 flex flex-wrap lg:flex-nowrap items-center justify-between gap-4 border border-white/10 shadow-2xl">
+        
+        <!-- Lighting Studio Environment -->
+        <div class="flex flex-col space-y-1.5 w-full sm:w-auto">
+            <span class="text-[10px] font-orbitron font-bold tracking-widest text-slate-400 uppercase">GOTHAM ATMOSPHERE</span>
+            <div class="flex space-x-2 overflow-x-auto pb-1 sm:pb-0">
+                <button onclick="setLightingMode('sunset')" id="light-sunset" class="glass-btn active px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap">GTA Sunset</button>
+                <button onclick="setLightingMode('cyber')" id="light-cyber" class="glass-btn px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap">Cyber Neon</button>
+                <button onclick="setLightingMode('rain')" id="light-rain" class="glass-btn px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap">Stormy Night</button>
+                <button onclick="setLightingMode('studio')" id="light-studio" class="glass-btn px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap">Bright Studio</button>
+            </div>
+        </div>
+
+        <div class="h-8 w-px bg-white/10 hidden lg:block"></div>
+
+        <!-- Hero Poses -->
+        <div class="flex flex-col space-y-1.5 w-full sm:w-auto">
+            <span class="text-[10px] font-orbitron font-bold tracking-widest text-slate-400 uppercase">HERO STANCE</span>
+            <div class="flex space-x-2">
+                <button onclick="setPose('abs')" id="pose-abs" class="glass-btn active px-3 py-1.5 rounded-lg text-xs font-medium text-amber-400 flex items-center gap-1">
+                    <i class="fa-solid fa-dumbbell"></i> 8-Pack Flex
+                </button>
+                <button onclick="setPose('hero')" id="pose-hero" class="glass-btn px-3 py-1.5 rounded-lg text-xs font-medium">Hero Guard</button>
+                <button onclick="setPose('combat')" id="pose-combat" class="glass-btn px-3 py-1.5 rounded-lg text-xs font-medium">Combat Ready</button>
+                <button onclick="setPose('hover')" id="pose-hover" class="glass-btn px-3 py-1.5 rounded-lg text-xs font-medium">Glider Spread</button>
+            </div>
+        </div>
+
+        <div class="h-8 w-px bg-white/10 hidden lg:block"></div>
+
+        <!-- Camera Views -->
+        <div class="flex flex-col space-y-1.5 w-full sm:w-auto">
+            <span class="text-[10px] font-orbitron font-bold tracking-widest text-slate-400 uppercase">CAMERA FOCUS</span>
+            <div class="flex space-x-2">
+                <button onclick="setCameraMode('abs')" id="cam-abs" class="glass-btn active px-3 py-1.5 rounded-lg text-xs font-medium text-yellow-300">8-Pack Zoom</button>
+                <button onclick="setCameraMode('hero')" id="cam-hero" class="glass-btn px-3 py-1.5 rounded-lg text-xs font-medium">Full Body</button>
+                <button onclick="setCameraMode('cowl')" id="cam-cowl" class="glass-btn px-3 py-1.5 rounded-lg text-xs font-medium">Cowl Portrait</button>
+                <button onclick="setCameraMode('tumbler')" id="cam-tumbler" class="glass-btn px-3 py-1.5 rounded-lg text-xs font-medium">Batmobile</button>
+            </div>
+        </div>
+
+        <div class="h-8 w-px bg-white/10 hidden lg:block"></div>
+
+        <!-- FX Actions -->
+        <div class="flex flex-col space-y-1.5 w-full sm:w-auto">
+            <span class="text-[10px] font-orbitron font-bold tracking-widest text-slate-400 uppercase">BOOST FX</span>
+            <div class="flex space-x-2">
+                <button onclick="triggerEngineRev()" class="glass-btn px-3 py-1.5 rounded-lg text-xs font-medium text-amber-400 hover:text-amber-300 flex items-center space-x-1">
+                    <i class="fa-solid fa-fire-flame-curved"></i>
+                    <span>Turbo Thruster</span>
+                </button>
+                <button onclick="toggleBatSignal()" id="btn-batsignal" class="glass-btn active px-3 py-1.5 rounded-lg text-xs font-medium text-yellow-400 hover:text-yellow-300">
+                    <i class="fa-solid fa-sun"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main JavaScript Application Logic -->
+    <script>
+        let scene, camera, renderer, controls;
+        let batmanGroup, tumblerGroup, capeMesh, batSignalLight, batSignalProjector;
+        let keyLight, fillLight, rimLight, topSpotLight, ambientLight, cyanNeon, amberNeon, absSpotLight;
+        let rainParticles, rainGeometry;
+        let clock = new THREE.Clock();
+        
+        let audioCtx = null, synthDroneNode = null;
+        let isAudioActive = false;
+        let isTacticalHud = false;
+        let isBatSignalOn = true;
+        let jetTurbineLight, turbineFlameMesh;
+
+        // Dynamic Limb Joints for Realistic Posing
+        let leftArmGroup, rightArmGroup, leftForearmGroup, rightForearmGroup, headMesh, chestMesh;
+
+        let cameraTargetPos = new THREE.Vector3(0, 2.0, 2.3); // Default Abs Zoom View
+        let cameraLookAtTarget = new THREE.Vector3(0, 2.05, 0);
+
+        // Procedural Carbon Kevlar PBR Texture Generator
+        function createCarbonKevlarTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#11141c';
+            ctx.fillRect(0, 0, 512, 512);
+            ctx.fillStyle = '#222836';
+            for (let i = 0; i < 512; i += 16) {
+                for (let j = 0; j < 512; j += 16) {
+                    if ((i + j) % 32 === 0) {
+                        ctx.fillRect(i, j, 16, 16);
+                    }
+                }
+            }
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(8, 8);
+            return texture;
+        }
+
+        // Procedural Wet Asphalt Normal Map Generator
+        function createAsphaltNormalMap() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            const imgData = ctx.createImageData(512, 512);
+            for (let i = 0; i < imgData.data.length; i += 4) {
+                const val = Math.floor(Math.random() * 80) + 120;
+                imgData.data[i] = val;
+                imgData.data[i+1] = val;
+                imgData.data[i+2] = 255;
+                imgData.data[i+3] = 255;
+            }
+            ctx.putImageData(imgData, 0, 0);
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(16, 16);
+            return texture;
+        }
+
+        // Procedural Bat Emblem Texture Map Generator
+        function createBatLogoTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, 512, 512);
+            
+            // Yellow Oval Backing
+            ctx.fillStyle = '#eab308';
+            ctx.beginPath();
+            ctx.ellipse(256, 256, 210, 130, 0, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // Black Bat Emblem Outline
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.moveTo(256, 160);
+            ctx.bezierCurveTo(270, 120, 340, 120, 370, 170);
+            ctx.bezierCurveTo(420, 160, 470, 220, 440, 290);
+            ctx.bezierCurveTo(380, 280, 340, 320, 256, 360);
+            ctx.bezierCurveTo(172, 320, 132, 280, 72, 290);
+            ctx.bezierCurveTo(42, 220, 92, 160, 142, 170);
+            ctx.bezierCurveTo(172, 120, 242, 120, 256, 160);
+            ctx.closePath();
+            ctx.fill();
+
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function initScene() {
+            const container = document.getElementById('webgl-container');
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.45;
+            container.appendChild(renderer.domElement);
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050a14);
+            scene.fog = new THREE.FogExp2(0x0a1020, 0.015);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
+            camera.position.copy(cameraTargetPos);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 + 0.02;
+            controls.minDistance = 1.0;
+            controls.maxDistance = 18;
+            controls.target.copy(cameraLookAtTarget);
+
+            // Lighting Setup - High Contrast Cinematic Studio Setup
+            ambientLight = new THREE.AmbientLight(0x1e293b, 1.8);
+            scene.add(ambientLight);
+
+            // High Precision Top Spotlight for Abs & Chest Shading
+            topSpotLight = new THREE.SpotLight(0xffffff, 7.0, 35, Math.PI / 4, 0.3);
+            topSpotLight.position.set(0, 10, 4);
+            topSpotLight.castShadow = true;
+            topSpotLight.shadow.mapSize.width = 2048;
+            topSpotLight.shadow.mapSize.height = 2048;
+            scene.add(topSpotLight);
+
+            // Dedicated Spotlight directly targeting 8-Pack Abs
+            absSpotLight = new THREE.SpotLight(0xfbbf24, 6.0, 12, Math.PI / 6, 0.2);
+            absSpotLight.position.set(0, 2.5, 3.5);
+            absSpotLight.target.position.set(0, 1.9, 0);
+            scene.add(absSpotLight);
+            scene.add(absSpotLight.target);
+
+            // Key Light (GTA Sunset Warm Amber)
+            keyLight = new THREE.DirectionalLight(0xf59e0b, 4.0);
+            keyLight.position.set(-8, 12, 6);
+            keyLight.castShadow = true;
+            scene.add(keyLight);
+
+            // Fill Light (Cool Slate Blue Horizon)
+            fillLight = new THREE.DirectionalLight(0x38bdf8, 2.8);
+            fillLight.position.set(8, 8, 5);
+            scene.add(fillLight);
+
+            // Rim Light (Cyan Specular Edge Outline)
+            rimLight = new THREE.DirectionalLight(0x00f0ff, 3.5);
+            rimLight.position.set(0, 9, -9);
+            scene.add(rimLight);
+
+            // Ground Reflective Neon Lights
+            cyanNeon = new THREE.PointLight(0x06b6d4, 3.0, 14);
+            cyanNeon.position.set(-3, 0.8, 2);
+            scene.add(cyanNeon);
+
+            amberNeon = new THREE.PointLight(0xf59e0b, 3.0, 14);
+            amberNeon.position.set(3, 0.8, 2);
+            scene.add(amberNeon);
+
+            buildEnvironment();
+            buildPhotorealisticBatman();
+            buildTumblerModel();
+            setupBatSignal();
+            setupRainSystem();
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function buildEnvironment() {
+            const asphaltNormal = createAsphaltNormalMap();
+
+            // Reflective Wet Gotham Asphalt Road Ground
+            const floorGeo = new THREE.PlaneGeometry(100, 100);
+            const floorMat = new THREE.MeshStandardMaterial({
+                color: 0x080c16,
+                roughness: 0.15,
+                metalness: 0.85,
+                normalMap: asphaltNormal,
+                normalScale: new THREE.Vector2(0.5, 0.5),
+            });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+        }
+
+        function buildPhotorealisticBatman() {
+            batmanGroup = new THREE.Group();
+            batmanGroup.position.set(0, 0, 0);
+
+            const carbonTex = createCarbonKevlarTexture();
+
+            // PBR Armor Materials
+            const kevlarArmorMat = new THREE.MeshStandardMaterial({
+                color: 0x141822,
+                metalness: 0.88,
+                roughness: 0.2,
+                roughnessMap: carbonTex,
+                bumpMap: carbonTex,
+                bumpScale: 0.045
+            });
+
+            const suitWeaveMat = new THREE.MeshStandardMaterial({
+                color: 0x0a0d14,
+                metalness: 0.45,
+                roughness: 0.45,
+                bumpMap: carbonTex,
+                bumpScale: 0.03
+            });
+
+            const polishedSteelMat = new THREE.MeshStandardMaterial({
+                color: 0x334155,
+                metalness: 0.95,
+                roughness: 0.12
+            });
+
+            const brassBeltMat = new THREE.MeshStandardMaterial({
+                color: 0xd97706,
+                metalness: 0.92,
+                roughness: 0.18
+            });
+
+            // --- HEAVY COMBAT BOOTS & MUSCULAR LEGS ---
+            const bootGeo = new THREE.BoxGeometry(0.24, 0.38, 0.42);
+            const leftBoot = new THREE.Mesh(bootGeo, kevlarArmorMat);
+            leftBoot.position.set(-0.25, 0.19, 0.06);
+            leftBoot.castShadow = true;
+            batmanGroup.add(leftBoot);
+
+            const rightBoot = leftBoot.clone();
+            rightBoot.position.x = 0.25;
+            batmanGroup.add(rightBoot);
+
+            // Calves (Lower Muscular Legs)
+            const calfGeo = new THREE.CylinderGeometry(0.15, 0.12, 0.7, 20);
+            const leftCalf = new THREE.Mesh(calfGeo, suitWeaveMat);
+            leftCalf.position.set(-0.25, 0.6, 0);
+            leftCalf.castShadow = true;
+            batmanGroup.add(leftCalf);
+
+            const rightCalf = leftCalf.clone();
+            rightCalf.position.x = 0.25;
+            batmanGroup.add(rightCalf);
+
+            // Quad Thighs (Sculpted Muscular Thighs)
+            const thighGeo = new THREE.CylinderGeometry(0.22, 0.16, 0.8, 20);
+            const leftThigh = new THREE.Mesh(thighGeo, suitWeaveMat);
+            leftThigh.position.set(-0.25, 1.25, 0);
+            leftThigh.castShadow = true;
+            batmanGroup.add(leftThigh);
+
+            const rightThigh = leftThigh.clone();
+            rightThigh.position.x = 0.25;
+            batmanGroup.add(rightThigh);
+
+            // Thigh Kevlar Armor Plates
+            const thighPlateGeo = new THREE.BoxGeometry(0.24, 0.45, 0.14);
+            const leftThighPlate = new THREE.Mesh(thighPlateGeo, kevlarArmorMat);
+            leftThighPlate.position.set(-0.26, 1.3, 0.13);
+            batmanGroup.add(leftThighPlate);
+
+            const rightThighPlate = leftThighPlate.clone();
+            rightThighPlate.position.x = 0.26;
+            batmanGroup.add(rightThighPlate);
+
+            // --- PELVIS & UTILITY BELT ---
+            const pelvisGeo = new THREE.BoxGeometry(0.66, 0.3, 0.4);
+            const pelvis = new THREE.Mesh(pelvisGeo, suitWeaveMat);
+            pelvis.position.set(0, 1.62, 0);
+            batmanGroup.add(pelvis);
+
+            // Metallic Gold Multi-Pocket Utility Belt
+            const beltGeo = new THREE.TorusGeometry(0.38, 0.055, 12, 36);
+            const belt = new THREE.Mesh(beltGeo, brassBeltMat);
+            belt.position.set(0, 1.74, 0);
+            belt.rotation.x = Math.PI / 2;
+            batmanGroup.add(belt);
+
+            // Modular Belt Pouches
+            for (let i = -3; i <= 3; i++) {
+                if (i === 0) continue;
+                const pouchGeo = new THREE.BoxGeometry(0.09, 0.14, 0.09);
+                const pouch = new THREE.Mesh(pouchGeo, brassBeltMat);
+                const angle = i * 0.35;
+                pouch.position.set(Math.sin(angle) * 0.4, 1.74, Math.cos(angle) * 0.4);
+                batmanGroup.add(pouch);
+            }
+
+            // Metallic Gold Buckle
+            const buckleGeo = new THREE.BoxGeometry(0.14, 0.11, 0.1);
+            const buckleMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.98, roughness: 0.1 });
+            const buckle = new THREE.Mesh(buckleGeo, buckleMat);
+            buckle.position.set(0, 1.74, 0.39);
+            batmanGroup.add(buckle);
+
+            // --- 3D SCULPTED 8-PACK ABS & FLEXED WAIST V-TAPER ---
+            const absGroup = new THREE.Group();
+            absGroup.position.set(0, 1.82, 0);
+
+            // 8 Individual Convex Abdominal Muscle Blocks
+            for (let row = 0; row < 4; row++) {
+                for (let col = 0; col < 2; col++) {
+                    const abGeo = new THREE.BoxGeometry(0.19, 0.125, 0.14);
+                    const abMesh = new THREE.Mesh(abGeo, kevlarArmorMat);
+                    abMesh.position.set(col === 0 ? -0.115 : 0.115, 0.08 + (row * 0.14), 0.19);
+                    abMesh.rotation.y = col === 0 ? 0.08 : -0.08;
+                    absGroup.add(abMesh);
+                }
+            }
+
+            // Deep V-Taper Oblique Muscle Ridges
+            for (let i = 0; i < 3; i++) {
+                const obliqueGeo = new THREE.BoxGeometry(0.14, 0.08, 0.1);
+                const leftOblique = new THREE.Mesh(obliqueGeo, kevlarArmorMat);
+                leftOblique.position.set(-0.25, 0.1 + (i * 0.13), 0.14);
+                leftOblique.rotation.z = -0.25;
+                absGroup.add(leftOblique);
+
+                const rightOblique = leftOblique.clone();
+                rightOblique.position.x = 0.25;
+                rightOblique.rotation.z = 0.25;
+                absGroup.add(rightOblique);
+            }
+
+            batmanGroup.add(absGroup);
+
+            // --- HEAVY PECTORAL CHEST & EMBOSSED BAT EMBLEM ---
+            const chestGroup = new THREE.Group();
+            chestGroup.position.set(0, 2.45, 0);
+
+            const pecGeo = new THREE.BoxGeometry(0.34, 0.34, 0.24);
+            const leftPec = new THREE.Mesh(pecGeo, kevlarArmorMat);
+            leftPec.position.set(-0.18, 0.02, 0.14);
+            leftPec.rotation.z = 0.08;
+            leftPec.castShadow = true;
+            chestGroup.add(leftPec);
+
+            const rightPec = leftPec.clone();
+            rightPec.position.x = 0.18;
+            rightPec.rotation.z = -0.08;
+            chestGroup.add(rightPec);
+
+            // 3D Embossed Oval Bat Emblem
+            const batTex = createBatLogoTexture();
+            const emblemGeo = new THREE.PlaneGeometry(0.5, 0.28);
+            const emblemMat = new THREE.MeshStandardMaterial({
+                map: batTex,
+                transparent: true,
+                metalness: 0.95,
+                roughness: 0.1,
+            });
+            const emblem = new THREE.Mesh(emblemGeo, emblemMat);
+            emblem.position.set(0, 0.03, 0.27);
+            chestGroup.add(emblem);
+
+            // Upper Trapezius & Muscular Neck
+            const trapGeo = new THREE.CylinderGeometry(0.23, 0.3, 0.28, 20);
+            const neck = new THREE.Mesh(trapGeo, suitWeaveMat);
+            neck.position.set(0, 0.25, 0.02);
+            chestGroup.add(neck);
+
+            batmanGroup.add(chestGroup);
+
+            // --- VASCULAR MUSCULAR ARMS & RAZOR GAUNTLETS ---
+            // Left Arm Group
+            leftArmGroup = new THREE.Group();
+            leftArmGroup.position.set(-0.48, 2.52, 0);
+
+            const deltoidGeo = new THREE.SphereGeometry(0.24, 20, 20);
+            deltoidGeo.scale(1.25, 1.05, 1.15);
+            const leftDeltoid = new THREE.Mesh(deltoidGeo, kevlarArmorMat);
+            leftArmGroup.add(leftDeltoid);
+
+            const bicepGeo = new THREE.CylinderGeometry(0.15, 0.13, 0.6, 20);
+            const leftBicep = new THREE.Mesh(bicepGeo, suitWeaveMat);
+            leftBicep.position.set(-0.05, -0.32, 0);
+            leftArmGroup.add(leftBicep);
+
+            // Forearm & Razor Fins
+            leftForearmGroup = new THREE.Group();
+            leftForearmGroup.position.set(-0.08, -0.65, 0);
+
+            const gauntletGeo = new THREE.CylinderGeometry(0.14, 0.11, 0.55, 20);
+            const leftGauntlet = new THREE.Mesh(gauntletGeo, polishedSteelMat);
+            leftForearmGroup.add(leftGauntlet);
+
+            // 3 Metallic Forearm Razor Fins
+            for (let i = 0; i < 3; i++) {
+                const finGeo = new THREE.ConeGeometry(0.03, 0.25, 4);
+                const fin = new THREE.Mesh(finGeo, polishedSteelMat);
+                fin.rotation.x = Math.PI / 3;
+                fin.position.set(-0.15, -0.12 + (i * 0.11), -0.06);
+                leftForearmGroup.add(fin);
+            }
+
+            leftArmGroup.add(leftForearmGroup);
+            batmanGroup.add(leftArmGroup);
+
+            // Right Arm Group
+            rightArmGroup = new THREE.Group();
+            rightArmGroup.position.set(0.48, 2.52, 0);
+
+            const rightDeltoid = leftDeltoid.clone();
+            rightArmGroup.add(rightDeltoid);
+
+            const rightBicep = leftBicep.clone();
+            rightBicep.position.x = 0.05;
+            rightArmGroup.add(rightBicep);
+
+            rightForearmGroup = new THREE.Group();
+            rightForearmGroup.position.set(0.08, -0.65, 0);
+
+            const rightGauntlet = leftGauntlet.clone();
+            rightForearmGroup.add(rightGauntlet);
+
+            for (let i = 0; i < 3; i++) {
+                const fin = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.25, 4), polishedSteelMat);
+                fin.rotation.x = Math.PI / 3;
+                fin.position.set(0.15, -0.12 + (i * 0.11), -0.06);
+                rightForearmGroup.add(fin);
+            }
+
+            rightArmGroup.add(rightForearmGroup);
+            batmanGroup.add(rightArmGroup);
+
+            // --- REALISTIC COWL & CYAN HUD LENSES ---
+            const headGroup = new THREE.Group();
+            headGroup.position.set(0, 2.82, 0.04);
+
+            const cowlGeo = new THREE.SphereGeometry(0.2, 24, 24);
+            cowlGeo.scale(0.92, 1.18, 1.08);
+            headMesh = new THREE.Mesh(cowlGeo, kevlarArmorMat);
+            headGroup.add(headMesh);
+
+            // Tall Pointed Cowl Ears
+            const earGeo = new THREE.ConeGeometry(0.05, 0.32, 16);
+            const leftEar = new THREE.Mesh(earGeo, kevlarArmorMat);
+            leftEar.position.set(-0.13, 0.28, -0.02);
+            leftEar.rotation.z = -0.12;
+            headGroup.add(leftEar);
+
+            const rightEar = leftEar.clone();
+            rightEar.position.x = 0.13;
+            rightEar.rotation.z = 0.12;
+            headGroup.add(rightEar);
+
+            // Glowing Cyan HUD Eyes
+            const eyeGeo = new THREE.BoxGeometry(0.075, 0.024, 0.035);
+            const eyeMat = new THREE.MeshStandardMaterial({
+                color: 0x00ffff,
+                emissive: 0x00f0ff,
+                emissiveIntensity: 0.8,
+            });
+            const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+            leftEye.position.set(-0.068, 0.03, 0.19);
+            leftEye.rotation.y = -0.12;
+            headGroup.add(leftEye);
+
+            const rightEye = leftEye.clone();
+            rightEye.position.x = 0.068;
+            rightEye.rotation.y = 0.12;
+            headGroup.add(rightEye);
+
+            batmanGroup.add(headGroup);
+
+            // --- DYNAMIC CLOTH CAPE WITH REAL PHYSICS WAVE ---
+            const capeGeo = new THREE.PlaneGeometry(1.9, 2.6, 24, 24);
+            const capeMat = new THREE.MeshStandardMaterial({
+                color: 0x090c14,
+                roughness: 0.3,
+                metalness: 0.35,
+                side: THREE.DoubleSide
+            });
+            capeMesh = new THREE.Mesh(capeGeo, capeMat);
+            capeMesh.position.set(0, 2.4, -0.24);
+            capeMesh.rotation.x = 0.12;
+            capeMesh.castShadow = true;
+            batmanGroup.add(capeMesh);
+
+            scene.add(batmanGroup);
+        }
+
+        function buildTumblerModel() {
+            tumblerGroup = new THREE.Group();
+            tumblerGroup.position.set(3.4, 0, -0.4);
+            tumblerGroup.rotation.y = -Math.PI / 4.2;
+
+            const stealthMat = new THREE.MeshStandardMaterial({
+                color: 0x121622,
+                metalness: 0.88,
+                roughness: 0.18,
+            });
+
+            const mechanicalMat = new THREE.MeshStandardMaterial({
+                color: 0x2d3748,
+                metalness: 0.92,
+                roughness: 0.22
+            });
+
+            const tireMat = new THREE.MeshStandardMaterial({
+                color: 0x0b0e14,
+                roughness: 0.92,
+                metalness: 0.08
+            });
+
+            // Angular Cockpit
+            const cockpitGeo = new THREE.ConeGeometry(1.4, 3.0, 5);
+            cockpitGeo.rotateX(Math.PI / 2);
+            const cockpit = new THREE.Mesh(cockpitGeo, stealthMat);
+            cockpit.position.set(0, 0.85, 0);
+            cockpit.scale.set(1.2, 0.65, 1.2);
+            cockpit.castShadow = true;
+            tumblerGroup.add(cockpit);
+
+            // Double Rear Heavy Tread Tires
+            const rearWheelGeo = new THREE.CylinderGeometry(0.75, 0.75, 0.65, 24);
+            rearWheelGeo.rotateZ(Math.PI / 2);
+
+            const rearLeftOuter = new THREE.Mesh(rearWheelGeo, tireMat);
+            rearLeftOuter.position.set(-1.25, 0.75, -1.3);
+            rearLeftOuter.castShadow = true;
+            tumblerGroup.add(rearLeftOuter);
+
+            const rearLeftInner = rearLeftOuter.clone();
+            rearLeftInner.position.x = -0.68;
+            tumblerGroup.add(rearLeftInner);
+
+            const rearRightOuter = rearLeftOuter.clone();
+            rearRightOuter.position.x = 1.25;
+            tumblerGroup.add(rearRightOuter);
+
+            const rearRightInner = rearLeftOuter.clone();
+            rearRightInner.position.x = 0.68;
+            tumblerGroup.add(rearRightInner);
+
+            // Front Double Wheels
+            const frontWheelGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 20);
+            frontWheelGeo.rotateZ(Math.PI / 2);
+
+            const frontLeft = new THREE.Mesh(frontWheelGeo, tireMat);
+            frontLeft.position.set(-1.15, 0.5, 1.45);
+            tumblerGroup.add(frontLeft);
+
+            const frontRight = frontLeft.clone();
+            frontRight.position.x = 1.15;
+            tumblerGroup.add(frontRight);
+
+            // Jet Engine Turbine
+            const turbineGeo = new THREE.CylinderGeometry(0.32, 0.42, 0.9, 16);
+            turbineGeo.rotateX(Math.PI / 2);
+            const turbine = new THREE.Mesh(turbineGeo, mechanicalMat);
+            turbine.position.set(0, 0.75, -1.55);
+            tumblerGroup.add(turbine);
+
+            // Turbo Flame Jet Exhaust
+            const flameGeo = new THREE.ConeGeometry(0.3, 1.6, 16);
+            flameGeo.rotateX(-Math.PI / 2);
+            const flameMat = new THREE.MeshStandardMaterial({
+                color: 0xff4500,
+                emissive: 0xff6600,
+                emissiveIntensity: 2.8,
+                transparent: true,
+                opacity: 0.92
+            });
+            turbineFlameMesh = new THREE.Mesh(flameGeo, flameMat);
+            turbineFlameMesh.position.set(0, 0.75, -2.4);
+            turbineFlameMesh.scale.set(0.1, 0.1, 0.1);
+            tumblerGroup.add(turbineFlameMesh);
+
+            jetTurbineLight = new THREE.PointLight(0xff6600, 0, 12);
+            jetTurbineLight.position.set(0, 0.75, -2.3);
+            tumblerGroup.add(jetTurbineLight);
+
+            scene.add(tumblerGroup);
+        }
+
+        function setupBatSignal() {
+            const coneGeo = new THREE.ConeGeometry(15, 55, 32, 1, true);
+            coneGeo.rotateX(Math.PI / 2);
+            const coneMat = new THREE.MeshBasicMaterial({
+                color: 0xfef08a,
+                transparent: true,
+                opacity: 0.18,
+                side: THREE.DoubleSide
+            });
+            batSignalProjector = new THREE.Mesh(coneGeo, coneMat);
+            batSignalProjector.position.set(-14, 34, -40);
+            batSignalProjector.rotation.y = Math.PI / 6;
+            scene.add(batSignalProjector);
+
+            batSignalLight = new THREE.SpotLight(0xfef08a, 12.0, 130, Math.PI / 5, 0.5);
+            batSignalLight.position.set(-14, 2, -10);
+            batSignalLight.target.position.set(-14, 48, -48);
+            scene.add(batSignalLight);
+            scene.add(batSignalLight.target);
+        }
+
+        function setupRainSystem() {
+            const count = 4000;
+            rainGeometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(count * 3);
+            const velocities = new Float32Array(count);
+
+            for (let i = 0; i < count; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * 50;
+                positions[i * 3 + 1] = Math.random() * 32;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 50;
+                velocities[i] = 0.4 + Math.random() * 0.5;
+            }
+
+            rainGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            rainGeometry.userData = { velocities };
+
+            const rainMat = new THREE.PointsMaterial({
+                color: 0x93c5fd,
+                size: 0.07,
+                transparent: true,
+                opacity: 0.75
+            });
+
+            rainParticles = new THREE.Points(rainGeometry, rainMat);
+            scene.add(rainParticles);
+        }
+
+        function initAudio() {
+            if (audioCtx) return;
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+
+            synthDroneNode = audioCtx.createOscillator();
+            const droneGain = audioCtx.createGain();
+            synthDroneNode.type = 'sawtooth';
+            synthDroneNode.frequency.setValueAtTime(55, audioCtx.currentTime);
+            
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(220, audioCtx.currentTime);
+
+            droneGain.gain.setValueAtTime(0.14, audioCtx.currentTime);
+            synthDroneNode.connect(filter);
+            filter.connect(droneGain);
+            droneGain.connect(audioCtx.destination);
+            synthDroneNode.start();
+        }
+
+        function toggleAudio() {
+            if (!audioCtx) {
+                initAudio();
+                isAudioActive = true;
+            } else if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+                isAudioActive = true;
+            } else if (audioCtx.state === 'running') {
+                audioCtx.suspend();
+                isAudioActive = false;
+            }
+
+            const btn = document.getElementById('btn-audio');
+            const icon = document.getElementById('audio-icon');
+            const label = document.getElementById('audio-label');
+
+            if (isAudioActive) {
+                btn.classList.add('active');
+                icon.className = 'fa-solid fa-volume-high text-cyan-400';
+                label.innerText = 'AUDIO ON';
+            } else {
+                btn.classList.remove('active');
+                icon.className = 'fa-solid fa-volume-xmark text-slate-400';
+                label.innerText = 'AUDIO OFF';
+            }
+        }
+
+        function playServoSound() {
+            if (!audioCtx || audioCtx.state !== 'running') return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(350, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(900, audioCtx.currentTime + 0.16);
+            gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.16);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.16);
+        }
+
+        function setLightingMode(mode) {
+            playServoSound();
+            document.querySelectorAll('[id^="light-"]').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`light-${mode}`).classList.add('active');
+
+            if (mode === 'sunset') {
+                renderer.toneMappingExposure = 1.45;
+                ambientLight.intensity = 1.8;
+                topSpotLight.intensity = 7.0;
+                keyLight.color.setHex(0xf59e0b);
+                fillLight.color.setHex(0x38bdf8);
+            } else if (mode === 'cyber') {
+                renderer.toneMappingExposure = 1.4;
+                ambientLight.intensity = 1.5;
+                keyLight.color.setHex(0x00f0ff);
+                fillLight.color.setHex(0xff007f);
+            } else if (mode === 'rain') {
+                renderer.toneMappingExposure = 1.25;
+                ambientLight.intensity = 1.2;
+                keyLight.color.setHex(0x60a5fa);
+                fillLight.color.setHex(0x1e293b);
+            } else if (mode === 'studio') {
+                renderer.toneMappingExposure = 1.8;
+                ambientLight.intensity = 3.5;
+                topSpotLight.intensity = 10.0;
+                keyLight.color.setHex(0xffffff);
+                fillLight.color.setHex(0xe2e8f0);
+            }
+        }
+
+        function setPose(pose) {
+            playServoSound();
+            document.querySelectorAll('[id^="pose-"]').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`pose-${pose}`).classList.add('active');
+
+            if (pose === 'abs') {
+                leftArmGroup.rotation.set(0.6, 0.2, -0.4);
+                rightArmGroup.rotation.set(0.6, -0.2, 0.4);
+                capeMesh.scale.set(1.0, 1.0, 1.0);
+                setCameraMode('abs');
+            } else if (pose === 'hero') {
+                leftArmGroup.rotation.set(0, 0, 0);
+                rightArmGroup.rotation.set(0, 0, 0);
+                capeMesh.scale.set(1.0, 1.0, 1.0);
+            } else if (pose === 'combat') {
+                leftArmGroup.rotation.set(0.85, 0.45, -0.2);
+                rightArmGroup.rotation.set(0.85, -0.45, 0.2);
+                capeMesh.scale.set(1.15, 1.0, 1.0);
+            } else if (pose === 'hover') {
+                leftArmGroup.rotation.set(0, 0, -1.25);
+                rightArmGroup.rotation.set(0, 0, 1.25);
+                capeMesh.scale.set(2.5, 1.25, 1.0);
+            }
+        }
+
+        function setCameraMode(mode) {
+            playServoSound();
+            document.querySelectorAll('[id^="cam-"]').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`cam-${mode}`).classList.add('active');
+
+            if (mode === 'abs') {
+                cameraTargetPos.set(0, 2.0, 2.2);
+                cameraLookAtTarget.set(0, 2.05, 0);
+            } else if (mode === 'hero') {
+                cameraTargetPos.set(0, 2.1, 5.2);
+                cameraLookAtTarget.set(0, 1.7, 0);
+            } else if (mode === 'cowl') {
+                cameraTargetPos.set(0, 2.85, 1.6);
+                cameraLookAtTarget.set(0, 2.85, 0);
+            } else if (mode === 'tumbler') {
+                cameraTargetPos.set(4.2, 1.8, 3.8);
+                cameraLookAtTarget.set(3.4, 0.75, -0.4);
+            }
+        }
+
+        function toggleTacticalVision() {
+            playServoSound();
+            isTacticalHud = !isTacticalHud;
+            const hudEl = document.getElementById('hud-tactical-grid');
+            const btn = document.getElementById('btn-tactical');
+
+            if (isTacticalHud) {
+                hudEl.classList.remove('opacity-0');
+                btn.classList.add('active');
+            } else {
+                hudEl.classList.add('opacity-0');
+                btn.classList.remove('active');
+            }
+        }
+
+        function toggleBatSignal() {
+            playServoSound();
+            isBatSignalOn = !isBatSignalOn;
+            const btn = document.getElementById('btn-batsignal');
+
+            if (isBatSignalOn) {
+                btn.classList.add('active');
+                batSignalLight.intensity = 12.0;
+                batSignalProjector.visible = true;
+            } else {
+                btn.classList.remove('active');
+                batSignalLight.intensity = 0;
+                batSignalProjector.visible = false;
+            }
+        }
+
+        function triggerEngineRev() {
+            let elapsed = 0;
+            const interval = setInterval(() => {
+                elapsed += 0.05;
+                const scale = Math.sin(elapsed * Math.PI) * 2.2;
+                turbineFlameMesh.scale.set(scale, scale, scale);
+                jetTurbineLight.intensity = scale * 7.0;
+
+                if (elapsed >= 1.0) {
+                    clearInterval(interval);
+                    turbineFlameMesh.scale.set(0.1, 0.1, 0.1);
+                    jetTurbineLight.intensity = 0;
+                }
+            }, 50);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = clock.getElapsedTime();
+
+            camera.position.lerp(cameraTargetPos, 0.045);
+            controls.target.lerp(cameraLookAtTarget, 0.045);
+            controls.update();
+
+            // Cape Real-Time Physics Wave
+            if (capeMesh) {
+                const positions = capeMesh.geometry.attributes.position;
+                for (let i = 0; i < positions.count; i++) {
+                    const y = positions.getY(i);
+                    const wave = Math.sin(time * 5.0 + y * 3.5) * 0.05;
+                    positions.setZ(i, wave);
+                }
+                capeMesh.geometry.attributes.position.needsUpdate = true;
+            }
+
+            // Rain Particle Fall
+            if (rainGeometry) {
+                const positions = rainGeometry.attributes.position.array;
+                const velocities = rainGeometry.userData.velocities;
+
+                for (let i = 0; i < positions.length / 3; i++) {
+                    positions[i * 3 + 1] -= velocities[i];
+                    if (positions[i * 3 + 1] < 0) {
+                        positions[i * 3 + 1] = 32;
+                    }
+                }
+                rainGeometry.attributes.position.needsUpdate = true;
+            }
+
+            // Hero Breathing Motion
+            if (batmanGroup) {
+                batmanGroup.position.y = Math.sin(time * 1.8) * 0.018;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        window.onload = function() {
+            initScene();
+            animate();
+        };
+    </script>
+</body>
+</html>
